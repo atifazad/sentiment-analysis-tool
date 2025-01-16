@@ -10,26 +10,17 @@ class TextInput(BaseModel):
     text: str
 
 
-# Load the sentiment analysis pipeline with a different model
-sentiment_pipeline = pipeline(
-    "sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
-
-
-def preprocess_text(text: str) -> str:
-    # Convert to lowercase
-    text = text.lower()
-    # Remove punctuation
-    text = re.sub(r'[^\w\s]', '', text)
-    # Remove extra whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+# Load the emotion classification pipeline with the new model
+emotion_pipeline = pipeline(
+    "text-classification", model="j-hartmann/emotion-english-distilroberta-base", return_all_scores=True)
 
 
 @router.post("/predict")
-async def predict_sentiment(input: TextInput):
+async def predict_emotion(input: TextInput):
     try:
-        preprocessed_text = preprocess_text(input.text)
-        result = sentiment_pipeline(preprocessed_text)
-        return {"sentiment": result[0]['label'], "score": result[0]['score']}
+        result = emotion_pipeline(input.text)
+        # Extract the highest scoring emotion
+        highest_emotion = max(result[0], key=lambda x: x['score'])
+        return {"emotion": highest_emotion['label'], "score": highest_emotion['score']}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
